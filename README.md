@@ -3,6 +3,11 @@ A simple cli/shell script to install and manage your chibisafe instance
 
 Check out [Pitu](https://github.com/pitu) and the [Chibisafe](https://github.com/chibisafe/chibisafe) project, they're awesome!
 
+## ⚠️ Experimental Usage ⚠️
+Please use this with care. I've tested it only on Debian 12 machines.
+The best case would be a freshly installed VPS or virtual machine to use this script on.
+It will install all dependencies (as root) but i'm considering building it in user-mode/sudo.
+
 ## What does it do?
 It will do following steps for you:
  - It will install following prerequisites if they not already installed: `sudo, ffmpeg, git, screen, curl, debian-keyring, debian-archive-keyring, apt-transport-https, curl`
@@ -33,7 +38,7 @@ Run it via
 ./chibisafe-cli
 ```
 
-## ⚠️ Experimental Usage ⚠️
-Please use this with care. I've tested it only on Debian 12 machines.
-The best case would be a freshly installed VPS or virtual machine to use this script on.
-It will install all dependencies (as root) but i'm considering building it in user-mode/sudo.
+## Planned features
+ - [ ] Update functionality for frontend and backend seperately 
+ - [ ] Backup functionality
+ - [ ] Proper cli commands for fast(er) accessibility
