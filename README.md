@@ -10,6 +10,9 @@ Make the script executable:
 chmod +x chibisafe-cli
 ```
 
-Run it via `./chibisafe-cli'
+Run it via 
+```
+./chibisafe-cli
+```
 
 ## ⚠️Only tested on Debian 12 stable ⚠️
