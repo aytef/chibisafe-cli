@@ -41,4 +41,8 @@ Run it via
 ## Planned features
  - [ ] Update functionality for frontend and backend seperately 
  - [ ] Backup functionality
- - [ ] Proper cli commands for fast(er) accessibility
+ - [x] Proper cli commands for fast(er) accessibility
+ - [x] Uninstall functionality
+ - [ ] Choose between docker or standalone setup
+ - [ ] Migrate database functionality
+ - [ ] Check on which distro the cli is running
