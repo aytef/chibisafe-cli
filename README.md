@@ -46,3 +46,5 @@ Run it via
  - [ ] Choose between docker or standalone setup
  - [ ] Migrate database functionality
  - [ ] Check on which distro the cli is running
+ - [ ] Add 'chibisafe-cli' as PATH command
+ - [ ] Add cURL functionabity to use the API via cli
