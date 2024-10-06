@@ -233,6 +233,14 @@ check_script_dir() {
     fi
 }
 
+load_script_dir() {
+    if [ -f "$CONFIG_FILE" ]; then
+        SCRIPT_DIR=$(cat "$CONFIG_FILE")
+    else
+        SCRIPT_DIR="$(dirname "$(realpath "$0")")"  # Use the script's directory as default
+    fi
+}
+
 # Function to check if the setup is complete
 check_setup_complete() {
     if [ ! -d "$SCRIPT_DIR/chibisafe" ]; then
@@ -494,11 +502,13 @@ parse_args() {
 }
 
 check_chibisafe_cli() {
+
+    # Check if the Chibisafe directory exists
     if [ ! -d "$SCRIPT_DIR/chibisafe" ]; then
         clear
         display_banner
         show_credits
-        echo -e "${YELLOW}[chibisafe-cli] No Chibisafe instance installed inside this folder.${RESET}"
+        echo -e "${YELLOW}[chibisafe-cli] No Chibisafe instance installed inside this folder: $SCRIPT_DIR/chibisafe${RESET}"
         setup_chibisafe  # Run setup if Chibisafe is not installed
     else
         parse_args "$@"  # Parse command line arguments
@@ -507,6 +517,7 @@ check_chibisafe_cli() {
 
 # Main function to run the script
 main() {
+    load_script_dir
     check_chibisafe_cli "$@"  # Check if Chibisafe is installed or parse CLI arguments
 }
 
