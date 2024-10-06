@@ -11,6 +11,34 @@ RESET="\033[0m"
 BACKEND_SESSION="chibisafe_backend"
 FRONTEND_SESSION="chibisafe_frontend"
 
+CONFIG_FILE="$SCRIPT_DIR/.chibisafe-cli-config"
+
+# Function to save configuration to a file
+save_config() {
+    echo -e "${GREEN}[chibisafe-cli] Configuration saved to $CONFIG_FILE.${RESET}"
+}
+
+# Function to load configuration from a file
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        # Load the existing configuration
+        source "$CONFIG_FILE"
+        #echo -e "${GREEN}[chibisafe-cli] Loaded configuration from $CONFIG_FILE.${RESET}"
+    else
+        # Config file does not exist, create it with default values
+        echo -e "${YELLOW}[chibisafe-cli] No configuration file found. Creating a new one with default values...${RESET}"
+
+        # Set default values for the configuration
+        DOMAIN="localhost"
+        API_PORT="8000"
+        FRONTEND_PORT="8001"
+
+        # Call save_config to write the default values to the config file
+        save_config
+        echo -e "${GREEN}[chibisafe-cli] Default configuration created and saved to $CONFIG_FILE.${RESET}"
+    fi
+}
+
 # ASCII Banner
 display_banner() {
     echo -e "${CYAN}"
@@ -22,18 +50,12 @@ display_banner() {
     echo -e "${RESET}"
 }
 
-# Function to load the installation directory from the config file
-load_script_dir() {
-    SCRIPT_DIR="$(dirname "$(realpath "$0")")"  # Use the script's directory as default
-}
-
 # Function to show credits
 show_credits() {
     echo -e "${CYAN}chibisafe [v6.4.2] by Pitu (https://github.com/pitu)${RESET}"
     echo -e "${CYAN}chibisafe-cli [v1.0.0] by Aytef (https://github.com/aytef)${RESET}"
     echo -e "${RESET}"
 }
-
 
 print_step() {
     local step_number=$1
@@ -55,7 +77,6 @@ install_package() {
         echo -e "${GREEN}[chibisafe-cli] Successfully installed $package.${RESET}"
     fi
 }
-
 
 # Function to check and add the GPG keyring
 check_add_keyring() {
@@ -86,21 +107,22 @@ display_service_status() {
         backend_status="${GREEN}running${RESET}"
     fi
     echo "You can use chibisafe-cli via this menu or directly via command-line:"
-    echo "./chibisafe-cli [frontend/backend/console/status/install]"
+    echo "./chibisafe-cli [frontend/backend/console/config/status/install]"
     echo ""
-    echo "Status:"
+    echo -e "Web URL: ${CYAN}$DOMAIN${RESET}"
     echo -e "Frontend: [$frontend_status] - Backend: [$backend_status]${RESET}"
 }
 
 # Function to set up the main menu
 main_menu() {
     while true; do
+        clear
         display_banner
         show_credits
         display_service_status
         echo ""
         PS3='Please enter your choice: '
-        options=("Start Services" "Stop Services" "Console" "Check Service Status" "Build Frontend" "Exit")
+        options=("Start Services" "Stop Services" "Console" "More options" "Exit")
         select opt in "${options[@]}"; do
             case $opt in
                 "Start Services")
@@ -115,14 +137,10 @@ main_menu() {
                     screen_session_menu
                     break
                     ;;
-                "Check Service Status")
-                    check_service_status
+                "More options")
+                    more_menu
                     break
-                    ;;
-                "Build Frontend")
-                    build_frontend
-                    break
-                    ;;
+                    ;;                                       
                 "Exit")
                     echo "Exiting..."
                     exit
@@ -133,19 +151,143 @@ main_menu() {
     done
 }
 
+more_menu() {
+    while true; do
+        clear  # Clear the screen for a fresh output each time
+        display_banner
+        echo -e "${CYAN}More options${RESET}"
+        echo ""  # Add space for better readability
+
+        # Display the menu options
+        PS3='Please enter your choice: '
+        options=("Build Frontend" "Backup instance" "Configure instance" "Uninstall instance" "Return to main menu")
+        
+        select opt in "${options[@]}"; do
+            case $opt in
+                "Build Frontend")
+                    build_frontend
+                    break
+                    ;;
+                "Backup instance")
+                    backup_instance
+                    break
+                    ;;       
+                "Configure instance")
+                    config_menu
+                    break
+                    ;;   
+                "Uninstall instance")
+                    uninstall_instance
+                    break
+                    ;;
+                "Return to main menu")
+                    return
+                    ;;
+                *)
+                    echo -e "${RED}[chibisafe-cli] Invalid option $REPLY.${RESET}"
+                    ;;
+            esac
+        done
+        
+        # After executing a function, prompt the user to press Enter to continue
+        echo -e "[chibisafe-cli] Press 'ENTER' to return to the menu...${RESET}"
+        read -r  # Wait for user input before clearing the screen and displaying the menu again
+    done
+}
+
+config_menu() {
+    while true; do
+        clear
+        display_banner
+        echo -e "${CYAN}Current Configuration:${RESET}"
+        echo -e "Domain: ${CYAN}$DOMAIN${RESET}"
+        echo -e "API Port: ${CYAN}$API_PORT${RESET}"
+        echo -e "Frontend Port: ${CYAN}$FRONTEND_PORT${RESET}"
+        echo ""
+        PS3='Please enter your choice: '
+        options=("Configure Domain" "Configure API Port" "Configure Frontend Port" "Return to main menu")
+        
+        select opt in "${options[@]}"; do
+            case $opt in
+                "Configure Domain")
+                    # Prompt for domain and save immediately
+                    read -rp "Enter the domain for Chibisafe (default: localhost): " DOMAIN
+                    DOMAIN=${DOMAIN:-localhost}
+                    save_config
+                    echo -e "${GREEN}[chibisafe-cli] Domain updated and saved successfully!${RESET}"
+                    break
+                    ;;
+                "Configure API Port")
+                    # Prompt for API port and save immediately
+                    read -rp "What port should be used for the API? (default: 8000): " API_PORT
+                    API_PORT=${API_PORT:-8000}
+                    save_config
+                    echo -e "${GREEN}[chibisafe-cli] API port updated and saved successfully!${RESET}"
+                    break
+                    ;;
+                "Configure Frontend Port")
+                    # Prompt for Frontend port and save immediately
+                    read -rp "What port should be used for the frontend? (default: 8001): " FRONTEND_PORT
+                    FRONTEND_PORT=${FRONTEND_PORT:-8001}
+                    save_config
+                    echo -e "${GREEN}[chibisafe-cli] Frontend port updated and saved successfully!${RESET}"
+                    break
+                    ;;
+                "Return to main menu")
+                    return
+                    ;;
+                *)
+                    echo -e "${RED}[chibisafe-cli] Invalid option $REPLY.${RESET}"
+                    ;;
+            esac
+        done
+    done
+}
+
+uninstall_instance(){
+    echo -e "${CYAN}[chibisafe-cli] Are you sure you want to uninstall Chibisafe? This will remove the 'chibisafe' folder but keep this CLI script. (y/n): ${RESET}"
+    read -r -n 1 RESPONSE  # Read a single character
+    echo ""  # Move to the next line
+
+    if [[ "$RESPONSE" =~ ^[Yy]$ ]]; then
+        echo -e "${CYAN}[chibisafe-cli] Stopping all running services...${RESET}"
+
+        # Automatically stop the services
+        stop_service "$FRONTEND_SESSION"
+        stop_service "$BACKEND_SESSION"
+
+        # Remove the chibisafe folder
+        if [ -d "$SCRIPT_DIR/chibisafe" ]; then
+            rm -rf "$SCRIPT_DIR/chibisafe"
+            echo -e "${GREEN}[chibisafe-cli] Chibisafe has been uninstalled successfully!${RESET}"
+            break
+        else
+            echo -e "${YELLOW}[chibisafe-cli] No Chibisafe instance found to uninstall.${RESET}"
+        fi
+    else
+        echo -e "${YELLOW}[chibisafe-cli] Uninstallation aborted.${RESET}"
+    fi
+}
+
+backup_instance(){
+    echo -e "${CYAN}[chibisafe-cli] coming soon${RESET}"
+}
 # Function to start services
 start_services_menu() {
+    clear
+    display_banner
+    echo -e "${CYAN}Services${RESET}"   
     echo "Choose a service to start:"
     echo ""
     PS3='Please enter your choice: '
-    services=("Frontend" "Backend" "All" "Go Back")
+    services=( "All" "Frontend only" "Backend only" "Return to main menu")
     select service in "${services[@]}"; do
         case $service in
-            "Frontend")
+            "Frontend only")
                 start_service "Frontend" "cd $SCRIPT_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
                 break
                 ;;
-            "Backend")
+            "Backend only")
                 start_service "Backend" "cd $SCRIPT_DIR/chibisafe && yarn start:backend" "$BACKEND_SESSION"
                 break
                 ;;
@@ -154,27 +296,33 @@ start_services_menu() {
                 start_service "Backend" "cd $SCRIPT_DIR/chibisafe && yarn start:backend" "$BACKEND_SESSION"
                 break
                 ;;
-            "Go Back")
+            "Return to main menu")
                 return
                 ;;
             *) echo "Invalid option $REPLY";;
         esac
     done
+    # After executing a function, prompt the user to press Enter to continue
+    echo -e "[chibisafe-cli] Press 'ENTER' to return to the menu...${RESET}"
+    read -r  # Wait for user input before clearing the screen and displaying the menu again    
 }
 
 # Function to stop services
 stop_services_menu() {
+    clear
+    display_banner
+    echo -e "${CYAN}Services${RESET}"
     echo "Choose a service to stop:"
     echo ""
     PS3='Please enter your choice: '
-    services=("Frontend" "Backend" "All" "Go Back")
+    services=("All" "Frontend only" "Backend only" "Return to main menu")
     select service in "${services[@]}"; do
         case $service in
-            "Frontend")
+            "Frontend only")
                 stop_service "$FRONTEND_SESSION"
                 break
                 ;;
-            "Backend")
+            "Backend only")
                 stop_service "$BACKEND_SESSION"
                 break
                 ;;
@@ -183,22 +331,27 @@ stop_services_menu() {
                 stop_service "$BACKEND_SESSION"
                 break
                 ;;
-            "Go Back")
+            "Return to main menu")
                 return
                 ;;
             *) echo "Invalid option $REPLY";;
         esac
     done
+    # After executing a function, prompt the user to press Enter to continue
+    echo -e "[chibisafe-cli] Press 'ENTER' to return to the menu...${RESET}"
+    read -r  # Wait for user input before clearing the screen and displaying the menu again   
 }
 
 # Function to access a screen session
 screen_session_menu() {
     clear
-    echo "Choose a screen session to access:"
+    display_banner
+    echo -e "${CYAN}Console${RESET}"    
+    echo "Choose a screen session to access."
     echo "Use 'CTRL + A' and press 'D' to detatch from the session afterwards"
     echo ""
     PS3='Please enter your choice: '
-    sessions=("Frontend" "Backend" "Go Back")
+    sessions=("Frontend" "Backend" "Return to main menu")
     select session in "${sessions[@]}"; do
         case $session in
             "Frontend")
@@ -209,7 +362,7 @@ screen_session_menu() {
                 access_service "$BACKEND_SESSION"
                 break
                 ;;
-            "Go Back")
+            "Return to main menu")
                 return
                 ;;
             *) echo "Invalid option $REPLY";;
@@ -219,10 +372,18 @@ screen_session_menu() {
 
 # Function to build the frontend
 build_frontend() {
-    echo -e "${CYAN}[chibisafe-cli] Building Frontend...${RESET}"
-    cd "$SCRIPT_DIR/chibisafe/packages/next" || { echo -e "${RED}[chibisafe-cli] Failed to enter Chibisafe directory.${RESET}"; exit 1; }
-    npm run build > /dev/null 2>&1
-    echo -e "${GREEN}[chibisafe-cli] Frontend built successfully!${RESET}"
+    echo -e "${CYAN}[chibisafe-cli] Do you want to build the Frontend? (y/n): ${RESET}"
+    read -r -n 1 RESPONSE  # Read a single character
+    echo ""  # Move to the next line
+
+    if [[ "$RESPONSE" =~ ^[Yy]$ ]]; then  # Check if the response is 'y' or 'Y'
+        echo -e "${CYAN}[chibisafe-cli] Building Frontend...${RESET}"
+        cd "$SCRIPT_DIR/chibisafe/packages/next" || { echo -e "${RED}[chibisafe-cli] Failed to enter Chibisafe directory.${RESET}"; exit 1; }
+        npm run build > /dev/null 2>&1
+        echo -e "${GREEN}[chibisafe-cli] Frontend built successfully!${RESET}"
+    else
+        echo -e "${YELLOW}[chibisafe-cli] Frontend build skipped.${RESET}"
+    fi
 }
 
 # Function to check if the installation directory exists
@@ -233,14 +394,12 @@ check_script_dir() {
     fi
 }
 
+# Function to load the installation directory from the config file
 load_script_dir() {
-    if [ -f "$CONFIG_FILE" ]; then
-        SCRIPT_DIR=$(cat "$CONFIG_FILE")
-    else
-        SCRIPT_DIR="$(dirname "$(realpath "$0")")"  # Use the script's directory as default
-    fi
+    # Ensure that the script path is resolved correctly
+    SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+    # echo -e "Script directory: ${SCRIPT_DIR}"  # Debugging line to show the resolved directory
 }
-
 # Function to check if the setup is complete
 check_setup_complete() {
     if [ ! -d "$SCRIPT_DIR/chibisafe" ]; then
@@ -329,6 +488,48 @@ setup_chibisafe() {
 }
 
 configure_caddy() {
+    load_config  # Attempt to load the config file
+
+    if [ -z "$API_PORT" ]; then
+        # Prompt for API port, default to 8000
+        read -rp "What port should be used for the API? (default 8000): " API_PORT
+        API_PORT=${API_PORT:-8000}  # Use 8000 if no input is provided
+    else
+        echo -e "${GREEN}[chibisafe-cli] Using saved API port: $API_PORT${RESET}"
+    fi
+
+    if [ -z "$FRONTEND_PORT" ]; then
+        # Prompt for frontend port, default to 8001
+        read -rp "What port should be used for the frontend? (default 8001): " FRONTEND_PORT
+        FRONTEND_PORT=${FRONTEND_PORT:-8001}  # Use 8001 if no input is provided
+    else
+        echo -e "${GREEN}[chibisafe-cli] Using saved frontend port: $FRONTEND_PORT${RESET}"
+    fi
+
+    if [ -z "$DOMAIN" ]; then
+        # Prompt user for domain
+        read -rp "Enter the domain for Chibisafe: " DOMAIN
+    else
+        echo -e "${GREEN}[chibisafe-cli] Using saved domain: $DOMAIN${RESET}"
+    fi
+
+    # Save the configuration
+    save_config
+
+    print_step 7 "Setting Base API URL for frontend..."
+
+    # Prompt for API port, default to 8000
+    read -rp "What port should be used for the API? (default 8000): " API_PORT
+    API_PORT=${API_PORT:-8000}  # Use 8000 if no input is provided
+
+    # Prompt for frontend port, default to 8001
+    read -rp "What port should be used for the frontend? (default 8001): " FRONTEND_PORT
+    FRONTEND_PORT=${FRONTEND_PORT:-8001}  # Use 8001 if no input is provided
+
+    # Set BASE_API_URL in the frontend's .env file
+    echo "BASE_API_URL=http://127.0.0.1:$API_PORT" >> "$SCRIPT_DIR/packages/next/.env"
+    echo -e "${GREEN}[chibisafe-cli] Set BASE_API_URL to http://127.0.0.1:$API_PORT in frontend .env file.${RESET}"
+
     print_step 8 "Configuring Caddy..."
 
     # Prompt user for domain
@@ -345,7 +546,7 @@ configure_caddy() {
         PROXY_SETTINGS=''
     fi
 
-    # Create the Caddyfile
+    # Create the Caddyfile with the specified API and frontend ports
     CADDYFILE_CONTENT="
         $DOMAIN {
             route {
@@ -355,19 +556,19 @@ configure_caddy() {
                 }
 
                 @api path /api/*
-                reverse_proxy @api http://127.0.0.1:8000 {
+                reverse_proxy @api http://127.0.0.1:$API_PORT {
                     header_up Host {http.reverse_proxy.upstream.hostport}
                     header_up X-Real-IP {http.request.header.X-Real-IP}
                     $PROXY_SETTINGS
                 }
 
                 @docs path /docs*
-                reverse_proxy @docs http://127.0.0.1:8000 {
+                reverse_proxy @docs http://127.0.0.1:$API_PORT {
                     header_up Host {http.reverse_proxy.upstream.hostport}
                     $PROXY_SETTINGS
                 }
 
-                reverse_proxy http://127.0.0.1:8001 {
+                reverse_proxy http://127.0.0.1:$FRONTEND_PORT {
                     header_up Host {http.reverse_proxy.upstream.hostport}
                     header_up X-Real-IP {http.request.header.X-Real-IP}
                 }
@@ -387,7 +588,6 @@ configure_caddy() {
 is_running() {
     screen -list | grep -q "$1"
 }
-
 
 # Function to check service status
 check_service_status() {
@@ -444,14 +644,14 @@ parse_args() {
     if [[ "$1" == "frontend" ]]; then
         case $2 in
             start)
-                start_service "Frontend" "cd $SCRIPT_DIR && yarn start:frontend" "$FRONTEND_SESSION"
+                start_service "Frontend" "cd $SCRIPT_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
                 ;;
             stop)
                 stop_service "$FRONTEND_SESSION"
                 ;;
             restart)
                 stop_service "$FRONTEND_SESSION"
-                start_service "Frontend" "cd $SCRIPT_DIR && yarn start:frontend" "$FRONTEND_SESSION"
+                start_service "Frontend" "cd $SCRIPT_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
                 ;;
             console)
                 access_service "$FRONTEND_SESSION"
@@ -495,20 +695,26 @@ parse_args() {
             *)
                 setup_chibisafe
                 ;;
-        esac                        
+        esac    
+    elif [[ "$1" == "config" ]]; then
+        case $2 in
+            *)
+                config_menu
+                ;;
+        esac                              
     else
-        echo -e "[chibisafe-cli] Usage: ./chibisafe [frontend/backend/status/install]"
+        echo -e "[chibisafe-cli] Usage: ./chibisafe [frontend/backend/status/install/config]"
     fi
 }
 
 check_chibisafe_cli() {
-
     # Check if the Chibisafe directory exists
-    if [ ! -d "$SCRIPT_DIR/chibisafe" ]; then
+    load_script_dir
+    if [ ! -d "$SCRIPT_DIR/chibisafe/" ]; then
         clear
         display_banner
         show_credits
-        echo -e "${YELLOW}[chibisafe-cli] No Chibisafe instance installed inside this folder: $SCRIPT_DIR/chibisafe${RESET}"
+        echo -e "${YELLOW}[chibisafe-cli] No Chibisafe instance found inside this folder${RESET}"
         setup_chibisafe  # Run setup if Chibisafe is not installed
     else
         parse_args "$@"  # Parse command line arguments
@@ -518,6 +724,7 @@ check_chibisafe_cli() {
 # Main function to run the script
 main() {
     load_script_dir
+    load_config  
     check_chibisafe_cli "$@"  # Check if Chibisafe is installed or parse CLI arguments
 }
 
