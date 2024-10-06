@@ -1,5 +1,5 @@
 # chibisafe-cli
-A simple cli/bash script to install and manage your chibisafe instance
+A simple cli/shell script to install and manage your chibisafe instance
 
 ## How to use?
 Just download the bash script and upload it into your desired installation folder.
