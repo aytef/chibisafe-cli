@@ -11,9 +11,6 @@ RESET="\033[0m"
 BACKEND_SESSION="chibisafe_backend"
 FRONTEND_SESSION="chibisafe_frontend"
 
-# Define configuration file
-CONFIG_FILE="$HOME/.chibisafe_config"
-
 # ASCII Banner
 display_banner() {
     echo -e "${CYAN}"
@@ -26,17 +23,8 @@ display_banner() {
 }
 
 # Function to load the installation directory from the config file
-load_install_dir() {
-    if [ -f "$CONFIG_FILE" ]; then
-        INSTALL_DIR=$(cat "$CONFIG_FILE")
-    else
-        INSTALL_DIR="$(dirname "$(realpath "$0")")"  # Use the script's directory as default
-    fi
-}
-
-# Function to write the installation directory to the config file
-save_install_dir() {
-    echo "$INSTALL_DIR" > "$CONFIG_FILE"
+load_script_dir() {
+    SCRIPT_DIR="$(dirname "$(realpath "$0")")"  # Use the script's directory as default
 }
 
 # Function to show credits
@@ -55,15 +43,6 @@ print_step() {
     local step_number=$1
     local step_message=$2
     echo -e "${CYAN}[chibisafe-cli] [$step_number/8] $step_message${RESET}"
-}
-
-show_progress() {
-    echo -ne "${CYAN}[chibisafe-cli] $1${RESET} "
-    for i in {1..50}; do
-        echo -ne "#"
-        sleep 0.01
-    done
-    echo -e " ${GREEN}check${RESET}"
 }
 
 # Function to install a package quietly if not already installed
@@ -109,9 +88,11 @@ display_service_status() {
     if is_running "$BACKEND_SESSION"; then
         backend_status="${GREEN}running${RESET}"
     fi
-
-    echo -e "Frontend: [$frontend_status] - Backend: [$backend_status]${RESET}"
+    echo "You can use chibisafe-cli via this menu or directly via command-line:"
+    echo "./chibisafe-cli [frontend/backend/console/status/install]"
     echo ""
+    echo "Status:"
+    echo -e "Frontend: [$frontend_status] - Backend: [$backend_status]${RESET}"
 }
 
 # Function to set up the main menu
@@ -119,9 +100,10 @@ main_menu() {
     while true; do
         display_banner
         show_credits
-        display_service_status  
+        display_service_status
+        echo ""
         PS3='Please enter your choice: '
-        options=("Start Services" "Stop Services" "Get Into Screen Session" "Check Service Status" "Build Frontend" "Setup Chibisafe" "Exit")
+        options=("Start Services" "Stop Services" "Console" "Check Service Status" "Build Frontend" "Exit")
         select opt in "${options[@]}"; do
             case $opt in
                 "Start Services")
@@ -132,7 +114,7 @@ main_menu() {
                     stop_services_menu
                     break
                     ;;
-                "Get Into Screen Session")
+                "Console")
                     screen_session_menu
                     break
                     ;;
@@ -142,10 +124,6 @@ main_menu() {
                     ;;
                 "Build Frontend")
                     build_frontend
-                    break
-                    ;;
-                "Setup Chibisafe")
-                    setup_chibisafe
                     break
                     ;;
                 "Exit")
@@ -161,21 +139,22 @@ main_menu() {
 # Function to start services
 start_services_menu() {
     echo "Choose a service to start:"
+    echo ""
     PS3='Please enter your choice: '
     services=("Frontend" "Backend" "All" "Go Back")
     select service in "${services[@]}"; do
         case $service in
             "Frontend")
-                start_service "Frontend" "cd $INSTALL_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
+                start_service "Frontend" "cd $SCRIPT_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
                 break
                 ;;
             "Backend")
-                start_service "Backend" "cd $INSTALL_DIR/chibisafe && yarn start:backend" "$BACKEND_SESSION"
+                start_service "Backend" "cd $SCRIPT_DIR/chibisafe && yarn start:backend" "$BACKEND_SESSION"
                 break
                 ;;
             "All")
-                start_service "Frontend" "cd $INSTALL_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
-                start_service "Backend" "cd $INSTALL_DIR/chibisafe && yarn start:backend" "$BACKEND_SESSION"
+                start_service "Frontend" "cd $SCRIPT_DIR/chibisafe && yarn start:frontend" "$FRONTEND_SESSION"
+                start_service "Backend" "cd $SCRIPT_DIR/chibisafe && yarn start:backend" "$BACKEND_SESSION"
                 break
                 ;;
             "Go Back")
@@ -189,6 +168,7 @@ start_services_menu() {
 # Function to stop services
 stop_services_menu() {
     echo "Choose a service to stop:"
+    echo ""
     PS3='Please enter your choice: '
     services=("Frontend" "Backend" "All" "Go Back")
     select service in "${services[@]}"; do
@@ -216,7 +196,10 @@ stop_services_menu() {
 
 # Function to access a screen session
 screen_session_menu() {
+    clear
     echo "Choose a screen session to access:"
+    echo "Use 'CTRL + A' and press 'D' to detatch from the session afterwards"
+    echo ""
     PS3='Please enter your choice: '
     sessions=("Frontend" "Backend" "Go Back")
     select session in "${sessions[@]}"; do
@@ -240,42 +223,44 @@ screen_session_menu() {
 # Function to build the frontend
 build_frontend() {
     echo -e "${CYAN}[chibisafe-cli] Building Frontend...${RESET}"
-    cd "$INSTALL_DIR/chibisafe/packages/next" || { echo -e "${RED}[chibisafe-cli] Failed to enter Chibisafe directory.${RESET}"; exit 1; }
+    cd "$SCRIPT_DIR/chibisafe/packages/next" || { echo -e "${RED}[chibisafe-cli] Failed to enter Chibisafe directory.${RESET}"; exit 1; }
     npm run build > /dev/null 2>&1
     echo -e "${GREEN}[chibisafe-cli] Frontend built successfully!${RESET}"
 }
 
 # Function to check if the installation directory exists
-check_install_dir() {
-    if [ -z "$INSTALL_DIR" ]; then
-        echo -e "${RED}[chibisafe-cli] Installation directory is not set. Please run the setup first.${RESET}"
-        return 1
+check_script_dir() {
+    if [ -z "$SCRIPT_DIR" ]; then
+        echo -e "${RED}[chibisafe-cli] Installation directory not found. Please run setup_chibisafe.${RESET}"
+        exit 1
     fi
-    if [ ! -d "$INSTALL_DIR" ]; then
-        echo -e "${RED}[chibisafe-cli] Installation directory not found. Please run the setup first.${RESET}"
-        return 1
+}
+
+# Function to check if the setup is complete
+check_setup_complete() {
+    if [ ! -d "$SCRIPT_DIR/chibisafe" ]; then
+        return 1  # Setup not complete
     fi
-    return 0
+    return 0  # Setup complete
 }
 
 # Function to set up Chibisafe
 setup_chibisafe() {
     read -rp "[chibisafe-cli] Do you want to start the installation process? (y/n):" choice
     if [[ ! "$choice" =~ ^[Yy]$ ]]; then
-        echo "[chibisafe-cli] Installation aborted."
+        echo -e "[chibisafe-cli] Installation aborted."
+        return
+    fi
+
+    if check_setup_complete; then
+        echo -e "${CYAN}[chibisafe-cli] Chibisafe has already been set up.${RESET}"
         return
     fi
 
     print_step 1 "Starting Chibisafe setup..."
 
     # Set the installation directory to the script's directory
-    INSTALL_DIR="$(dirname "$(realpath "$0")")"
-
-    # Save the installation directory to the config file
-    save_install_dir
-
-    # Check if the install directory is valid
-    check_install_dir || return
+    SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 
     # Setup prerequisites
     print_step 2 "Installing dependencies..."
@@ -299,39 +284,43 @@ setup_chibisafe() {
         curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
         apt update > /dev/null 2>&1
         apt install -y caddy > /dev/null 2>&1
-        echo "${GREEN}[chibisafe-cli] Caddy installed successfully.${RESET}"
+        echo -e "${GREEN}[chibisafe-cli] Caddy installed successfully.${RESET}"
     else
-        echo "${GREEN}[chibisafe-cli] Caddy is already installed.${RESET}"
+        echo -e "${GREEN}[chibisafe-cli] Caddy is already installed.${RESET}"
     fi
 
-    # Set INSTALL_DIR based on the current directory of the script
-    INSTALL_DIR="$(dirname "$(realpath "$0")")/chibisafe"
-    print_step 4 "Installing Chibisafe to $INSTALL_DIR..."
+    # Set SCRIPT_DIR based on the current directory of the script
+    SCRIPT_DIR="$(dirname "$(realpath "$0")")/chibisafe"
+    print_step 4 "Installing Chibisafe to $SCRIPT_DIR..."
 
     # Clone Chibisafe if it doesn't already exist
-    if [ ! -d "$INSTALL_DIR" ]; then
+    if [ ! -d "$SCRIPT_DIR" ]; then
         print_step 5 "Cloning Chibisafe..."
-        git clone https://github.com/chibisafe/chibisafe.git "$INSTALL_DIR" > /dev/null 2>&1
-        show_progress "Cloning Chibisafe"
+        git clone https://github.com/chibisafe/chibisafe.git "$SCRIPT_DIR" > /dev/null 2>&1
     fi
 
     # Install dependencies and build the project
     print_step 6 "Installing dependencies and building Chibisafe..."
-    cd "$INSTALL_DIR" || { echo "Failed to enter Chibisafe directory."; exit 1; }
+    cd "$SCRIPT_DIR" || { echo "Failed to enter Chibisafe directory."; exit 1; }
     yarn install > /dev/null 2>&1
     yarn workspace @chibisafe/backend generate > /dev/null 2>&1
     yarn workspace @chibisafe/backend migrate > /dev/null 2>&1
     yarn build > /dev/null 2>&1
-    show_progress "Building Chibisafe"
 
     print_step 7 "Setting Base API URL for frontend..."
     # Set BASE_API_URL
-    echo "BASE_API_URL=http://127.0.0.1:8000" >> "$INSTALL_DIR/packages/next/.env"
+    echo "BASE_API_URL=http://127.0.0.1:8000" >> "$SCRIPT_DIR/packages/next/.env"
 
     # Configure Caddy
     configure_caddy
-
-    echo -e "${GREEN}[chibisafe-cli] Chibisafe setup completed! Installation directory set to $INSTALL_DIR${RESET}"
+    clear
+    display_banner
+    show_credits    
+    echo -e "${GREEN}[chibisafe-cli] Chibisafe setup completed! Installation directory set to $SCRIPT_DIR${RESET}"
+    echo ""
+    echo "Visit your Chibisafe instance under 'https://$DOMAIN'"
+    echo "The initial credentials for the dashboard are 'admin/admin'"
+    echo "You can now manage your instance via './chibisafe-cli'."
 }
 
 configure_caddy() {
@@ -356,7 +345,7 @@ configure_caddy() {
         $DOMAIN {
             route {
                 file_server * {
-                    root $INSTALL_DIR/app/uploads
+                    root $SCRIPT_DIR/app/uploads
                     pass_thru
                 }
 
@@ -389,14 +378,12 @@ configure_caddy() {
     echo -e "${GREEN}[chibisafe-cli] Caddy configuration finished, restarting Caddy service daemon...${RESET}"
 }
 
-
 # Function to check service status
 check_service_status() {
     echo -e "${CYAN}[chibisafe-cli] Checking service status...${RESET}"
     is_running "$FRONTEND_SESSION" && echo -e "${GREEN}[chibisafe-cli] Frontend is running.${RESET}" || echo -e "${RED}[chibisafe-cli] Frontend is not running.${RESET}"
     is_running "$BACKEND_SESSION" && echo -e "${GREEN}[chibisafe-cli] Backend is running.${RESET}" || echo -e "${RED}[chibisafe-cli] Backend is not running.${RESET}"
 }
-
 
 # Function to start a service
 start_service() {
@@ -436,6 +423,89 @@ access_service() {
     fi
 }
 
-# Main execution starts here
-load_install_dir  # Load the installation directory from the config file
-main_menu  # Start the main menu
+# Function to parse command line arguments
+parse_args() {
+    if [ $# -eq 0 ]; then
+        main_menu
+        return
+    fi
+
+    if [[ "$1" == "frontend" ]]; then
+        case $2 in
+            start)
+                start_service "Frontend" "cd $SCRIPT_DIR && yarn start:frontend" "$FRONTEND_SESSION"
+                ;;
+            stop)
+                stop_service "$FRONTEND_SESSION"
+                ;;
+            restart)
+                stop_service "$FRONTEND_SESSION"
+                start_service "Frontend" "cd $SCRIPT_DIR && yarn start:frontend" "$FRONTEND_SESSION"
+                ;;
+            console)
+                access_service "$FRONTEND_SESSION"
+                break
+                ;;            
+            build)
+                build_frontend
+                ;;
+            *)
+                echo -e "[chibisafe-cli] Usage: ./chibisafe frontend [start/stop/restart/console/build]${RESET}"
+                ;;
+        esac
+    elif [[ "$1" == "backend" ]]; then
+        case $2 in
+            start)
+                start_service "Backend" "cd $SCRIPT_DIR && yarn start:backend" "$BACKEND_SESSION"
+                ;;
+            stop)
+                stop_service "$BACKEND_SESSION"
+                ;;
+            restart)
+                stop_service "$BACKEND_SESSION"
+                start_service "Backend" "cd $SCRIPT_DIR && yarn start:backend" "$BACKEND_SESSION"
+                ;;
+            console)
+                access_service "$BACKEND_SESSION"
+                break
+                ;;    
+            *)
+                echo -e "[chibisafe-cli] Usage: ./chibisafe backend [start/stop/restart/console]${RESET}"
+                ;;
+        esac
+    elif [[ "$1" == "status" ]]; then
+        case $2 in
+            *)
+                check_service_status
+                ;;
+        esac     
+    elif [[ "$1" == "install" ]]; then
+        case $2 in
+            *)
+                setup_chibisafe
+                ;;
+        esac                        
+    else
+        echo -e "[chibisafe-cli] Usage: ./chibisafe [frontend/backend/status/install]"
+    fi
+}
+
+check_chibisafe_cli() {
+    if [ ! "$SCRIPT_DIR/chibisafe" ]; then
+        clear
+        display_banner
+        show_credits
+        echo -e "${YELLOW}[chibisafe-cli] No Chibisafe instance installed inside this folder.${RESET}"
+        setup_chibisafe  # Run setup if Chibisafe is not installed
+    else
+        parse_args "$@"  # Parse command line arguments
+    fi
+}
+
+# Main function to run the script
+main() {
+    check_chibisafe_cli "$@"  # Check if Chibisafe is installed or parse CLI arguments
+}
+
+# Run the script
+main "$@"
