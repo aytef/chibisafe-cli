@@ -34,10 +34,6 @@ show_credits() {
     echo -e "${RESET}"
 }
 
-# Function to check if a screen session is running
-is_running() {
-    screen -list | grep -q "$1"
-}
 
 print_step() {
     local step_number=$1
@@ -59,6 +55,7 @@ install_package() {
         echo -e "${GREEN}[chibisafe-cli] Successfully installed $package.${RESET}"
     fi
 }
+
 
 # Function to check and add the GPG keyring
 check_add_keyring() {
@@ -378,6 +375,12 @@ configure_caddy() {
     echo -e "${GREEN}[chibisafe-cli] Caddy configuration finished, restarting Caddy service daemon...${RESET}"
 }
 
+# Function to check if a screen session is running
+is_running() {
+    screen -list | grep -q "$1"
+}
+
+
 # Function to check service status
 check_service_status() {
     echo -e "${CYAN}[chibisafe-cli] Checking service status...${RESET}"
@@ -491,7 +494,7 @@ parse_args() {
 }
 
 check_chibisafe_cli() {
-    if [ ! "$SCRIPT_DIR/chibisafe" ]; then
+    if [ ! -d "$SCRIPT_DIR/chibisafe" ]; then
         clear
         display_banner
         show_credits
