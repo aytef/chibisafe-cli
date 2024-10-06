@@ -279,11 +279,14 @@ setup_chibisafe() {
 
     # Setup prerequisites
     print_step 2 "Installing dependencies..."
-    install_package "curl" 2
-    install_package "yarn" 3
-    install_package "nodejs" 4
-    install_package "npm" 5
-    install_package "screen" 6
+    install_package "sudo" 2
+    install_package "ffmpeg" 3
+    install_package "git" 4
+    install_package "screen" 5
+    install_package "debian-keyring" 6
+    install_package "debian-archive-keyring" 7
+    install_package "apt-transport-https" 8
+    install_package "curl" 9
 
     # Add the GPG keyring
     keyring_url="https://chibisafe.dev/keyring.gpg"
