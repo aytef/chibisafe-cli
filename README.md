@@ -45,6 +45,6 @@ Run it via
  - [x] Uninstall functionality
  - [ ] Choose between docker or standalone setup
  - [ ] Migrate database functionality
- - [ ] Check on which distro the cli is running
+ - [x] Check on which distro the cli is running
  - [ ] Add 'chibisafe-cli' as PATH command
- - [ ] Add cURL functionabity to use the API via cli
+ - [x] Add cURL functionabity/wrapper to use the API via cli
